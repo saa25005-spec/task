@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>農産物直売所 お客さまの声＆入荷リクエスト掲示板</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        farm: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            800: '#166534',
+                            900: '#14532d',
+                        },
+                        amberCustom: {
+                            500: '#f59e0b',
+                            600: '#d97706',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans JP"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Noto Sans JP', sans-serif; }
+        .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px); }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased">
+
+    <!-- Header Navbar -->
+    <header class="bg-emerald-700 text-white shadow-md sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-white text-emerald-700 p-2 rounded-xl shadow-inner flex items-center justify-center">
+                    <i class="fa-solid fa-wheat-awn text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg sm:text-xl font-bold tracking-tight leading-tight">みどり農産物直売所</h1>
+                    <p class="text-xs text-emerald-100 hidden sm:block">お客さまの声・入荷リクエスト＆スタッフ対応ボード</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-3">
+                <!-- Staff / Customer Mode Toggle -->
+                <button id="toggleStaffModeBtn" onclick="toggleStaffMode()" class="hidden sm:flex items-center space-x-1 text-xs bg-emerald-800 hover:bg-emerald-900 border border-emerald-600 px-3 py-1.5 rounded-full transition shadow-sm">
+                    <i class="fa-solid fa-user-gear text-amber-300"></i>
+                    <span id="staffModeText">スタッフモード切り替え</span>
+                </button>
+
+                <!-- Auth Buttons -->
+                <div id="authContainer">
+                    <button id="googleSignInBtn" onclick="loginWithGoogle()" class="flex items-center space-x-2 bg-white text-slate-700 hover:bg-slate-100 font-medium px-4 py-1.5 rounded-lg text-sm shadow-sm transition">
+                        <i class="fa-brands fa-google text-red-500"></i>
+                        <span>Googleでログイン</span>
+                    </button>
+                    
+                    <div id="userInfo" class="hidden flex items-center space-x-3">
+                        <div class="flex items-center space-x-2 bg-emerald-800/80 px-3 py-1 rounded-full border border-emerald-600">
+                            <img id="userAvatar" class="w-7 h-7 rounded-full border border-white" src="" alt="User Avatar">
+                            <span id="userName" class="text-xs font-medium max-w-[100px] sm:max-w-[150px] truncate"></span>
+                        </div>
+                        <button onclick="logout()" class="text-xs bg-emerald-800 hover:bg-emerald-900 px-2.5 py-1.5 rounded-lg transition" title="ログアウト">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT CONTAINER -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-6">
+
+        <!-- GitHub Pages / Auth setup announcement -->
+        <div id="setupBanner" class="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-4 shadow-sm relative flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div class="flex items-start space-x-3">
+                <div class="p-2 bg-emerald-100 text-emerald-700 rounded-xl mt-0.5">
+                    <i class="fa-solid fa-circle-info text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-emerald-900 text-sm sm:text-base">直売所コミュニティ掲示板へようこそ！</h3>
+                    <p class="text-xs sm:text-sm text-slate-600 mt-0.5">
+                        「〇〇野菜が入荷してほしい」「店舗の感想」などを自由に投稿・共有できます。スタッフが確認して順次回答・対応します！
+                    </p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2 shrink-0 self-end md:self-center">
+                <button onclick="openHelpModal()" class="text-xs text-emerald-700 hover:text-emerald-800 bg-white border border-emerald-300 font-medium px-3 py-1.5 rounded-lg shadow-sm hover:bg-emerald-50 transition">
+                    <i class="fa-brands fa-github mr-1"></i> GitHub Pages公開ガイド
+                </button>
+            </div>
+        </div>
+
+        <!-- Controls & Tabs Header -->
+        <div class="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+            <!-- Navigation Tabs -->
+            <div class="flex items-center space-x-1 sm:space-x-2 overflow-x-auto pb-1 md:pb-0 custom-scrollbar">
+                <button onclick="switchTab('all')" id="tab-all" class="tab-btn font-medium text-xs sm:text-sm px-4 py-2 rounded-xl transition flex items-center space-x-2 bg-emerald-600 text-white shadow-sm">
+                    <i class="fa-solid fa-comments"></i>
+                    <span>すべての投稿</span>
+                </button>
+                <button onclick="switchTab('request')" id="tab-request" class="tab-btn font-medium text-xs sm:text-sm px-4 py-2 rounded-xl transition flex items-center space-x-2 bg-slate-100 text-slate-600 hover:bg-slate-200">
+                    <i class="fa-solid fa-basket-shopping text-emerald-600"></i>
+                    <span>入荷リクエスト</span>
+                </button>
+                <button onclick="switchTab('feedback')" id="tab-feedback" class="tab-btn font-medium text-xs sm:text-sm px-4 py-2 rounded-xl transition flex items-center space-x-2 bg-slate-100 text-slate-600 hover:bg-slate-200">
+                    <i class="fa-solid fa-heart text-rose-500"></i>
+                    <span>ご意見・ご感想</span>
+                </button>
+                <button onclick="switchTab('tasks')" id="tab-tasks" class="tab-btn font-medium text-xs sm:text-sm px-4 py-2 rounded-xl transition flex items-center space-x-2 bg-slate-100 text-slate-600 hover:bg-slate-200">
+                    <i class="fa-solid fa-list-check text-blue-600"></i>
+                    <span>スタッフ対応タスク</span>
+                    <span id="pendingTaskBadge" class="hidden bg-amber-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">0</span>
+                </button>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center space-x-2 shrink-0">
+                <!-- Search Box -->
+                <div class="relative flex-1 md:w-48">
+                    <input type="text" id="searchInput" oninput="renderPosts()" placeholder="検索 (野菜・感想など)..." class="w-full text-xs bg-slate-50 border border-slate-300 rounded-xl pl-8 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition">
+                    <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-slate-400 text-xs"></i>
+                </div>
+
+                <!-- Create Post Button -->
+                <button onclick="openCreateModal()" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-medium px-4 py-2 rounded-xl text-xs sm:text-sm shadow-sm transition flex items-center space-x-2 shrink-0">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>新規投稿</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Filter / Stats Ribbon -->
+        <div class="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 px-1">
+            <div class="flex items-center space-x-2 overflow-x-auto py-1">
+                <span class="font-bold text-slate-700">絞り込み:</span>
+                <button onclick="setFilterCategory('ALL')" id="filter-cat-ALL" class="cat-filter-btn px-2.5 py-1 rounded-lg bg-slate-200 text-slate-800 font-semibold transition">すべて</button>
+                <button onclick="setFilterCategory('野菜・果物')" id="filter-cat-野菜・果物" class="cat-filter-btn px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 transition">野菜・果物</button>
+                <button onclick="setFilterCategory('加工品・お惣菜')" id="filter-cat-加工品・お惣菜" class="cat-filter-btn px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 transition">加工品・お惣菜</button>
+                <button onclick="setFilterCategory('接客・店舗環境')" id="filter-cat-接客・店舗環境" class="cat-filter-btn px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 transition">接客・店舗環境</button>
+                <button onclick="setFilterCategory('イベント・その他')" id="filter-cat-イベント・その他" class="cat-filter-btn px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 transition">イベント・その他</button>
+            </div>
+
+            <div class="flex items-center space-x-3 ml-auto">
+                <span id="postCountLabel" class="font-medium text-slate-600">全 0 件</span>
+                <select id="sortBySelect" onchange="renderPosts()" class="bg-white border border-slate-300 rounded-lg text-xs py-1 px-2 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                    <option value="newest">新しい順</option>
+                    <option value="likes">共感数が多い順</option>
+                    <option value="rating">評価が高い順</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Posts List Container -->
+        <div id="postsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <!-- Dynamic Post Cards injected here -->
+        </div>
+
+        <!-- Empty State View -->
+        <div id="emptyState" class="hidden flex flex-col items-center justify-center py-16 bg-white rounded-2xl border border-dashed border-slate-300 text-center p-6">
+            <div class="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center text-2xl mb-3">
+                <i class="fa-solid fa-comments"></i>
+            </div>
+            <h4 class="text-base font-bold text-slate-700">該当する投稿がありません</h4>
+            <p class="text-xs text-slate-500 mt-1 max-w-sm">最初の声を投稿して、直売所スタッフに意見やリクエストを届けてみましょう！</p>
+            <button onclick="openCreateModal()" class="mt-4 bg-emerald-600 text-white text-xs px-4 py-2 rounded-xl font-medium shadow-sm hover:bg-emerald-700 transition">
+                <i class="fa-solid fa-plus mr-1"></i> 新しく投稿する
+            </button>
+        </div>
+
+    </main>
+
+    <!-- MODAL 1: Create / Edit Post Modal -->
+    <div id="createModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto custom-scrollbar flex flex-col">
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
+                <h3 class="font-bold text-slate-800 text-base flex items-center space-x-2">
+                    <i class="fa-solid fa-pen-to-square text-emerald-600"></i>
+                    <span>投稿フォーム</span>
+                </h3>
+                <button onclick="closeCreateModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form id="postForm" onsubmit="submitPost(event)" class="p-6 space-y-4">
+                <!-- Type Selection -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">投稿の種類 <span class="text-red-500">*</span></label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="cursor-pointer border border-slate-200 rounded-xl p-3 flex items-center space-x-2 hover:bg-slate-50 has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50/50 transition">
+                            <input type="radio" name="postType" value="request" checked class="accent-emerald-600">
+                            <div class="text-xs">
+                                <span class="font-bold text-slate-800 block">入荷リクエスト</span>
+                                <span class="text-slate-500 text-[11px]">「〇〇野菜がほしい」等</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer border border-slate-200 rounded-xl p-3 flex items-center space-x-2 hover:bg-slate-50 has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50/50 transition">
+                            <input type="radio" name="postType" value="feedback" class="accent-emerald-600">
+                            <div class="text-xs">
+                                <span class="font-bold text-slate-800 block">ご意見・ご感想</span>
+                                <span class="text-slate-500 text-[11px]">接客、店舗への提案等</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Category -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">カテゴリー <span class="text-red-500">*</span></label>
+                    <select id="postCategory" required class="w-full text-xs border border-slate-300 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        <option value="野菜・果物">野菜・果物</option>
+                        <option value="加工品・お惣菜">加工品・お惣菜</option>
+                        <option value="接客・店舗環境">接客・店舗環境</option>
+                        <option value="イベント・その他">イベント・その他</option>
+                    </select>
+                </div>
+
+                <!-- Title -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">タイトル <span class="text-red-500">*</span></label>
+                    <input type="text" id="postTitle" required placeholder="例: シャインマスカットの入荷予定を知りたいです！" class="w-full text-xs border border-slate-300 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                </div>
+
+                <!-- Content -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">詳しい内容 <span class="text-red-500">*</span></label>
+                    <textarea id="postContent" required rows="4" placeholder="具体的なご意見や、ご希望の商品・数量などをご自由にお書きください。" class="w-full text-xs border border-slate-300 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none resize-none"></textarea>
+                </div>
+
+                <!-- Rating (Optional for feedback) -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">満足度（任意）</label>
+                    <div class="flex items-center space-x-1" id="starRatingSelector">
+                        <button type="button" onclick="setFormRating(1)" class="star-select text-slate-300 text-xl"><i class="fa-solid fa-star"></i></button>
+                        <button type="button" onclick="setFormRating(2)" class="star-select text-slate-300 text-xl"><i class="fa-solid fa-star"></i></button>
+                        <button type="button" onclick="setFormRating(3)" class="star-select text-slate-300 text-xl"><i class="fa-solid fa-star"></i></button>
+                        <button type="button" onclick="setFormRating(4)" class="star-select text-slate-300 text-xl"><i class="fa-solid fa-star"></i></button>
+                        <button type="button" onclick="setFormRating(5)" class="star-select text-slate-300 text-xl"><i class="fa-solid fa-star"></i></button>
+                        <span id="ratingValText" class="text-xs text-slate-400 ml-2">未選択</span>
+                    </div>
+                </div>
+
+                <!-- Image URL (Optional) -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">写真URL（任意）</label>
+                    <input type="url" id="postImageUrl" placeholder="https://images.unsplash.com/..." class="w-full text-xs border border-slate-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    <p class="text-[11px] text-slate-400 mt-1">※Web上の画像リンクを添付できます。</p>
+                </div>
+
+                <!-- Form Submit Buttons -->
+                <div class="pt-3 flex items-center justify-end space-x-3 border-t border-slate-100">
+                    <button type="button" onclick="closeCreateModal()" class="text-xs font-medium px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl transition">キャンセル</button>
+                    <button type="submit" id="submitBtn" class="text-xs font-medium bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl shadow-sm transition flex items-center space-x-1">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        <span>投稿する</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: Staff Reply / Status Update Modal -->
+    <div id="staffModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-slate-800 text-base flex items-center space-x-2">
+                    <i class="fa-solid fa-user-shield text-emerald-600"></i>
+                    <span>直売所スタッフ対応</span>
+                </h3>
+                <button onclick="closeStaffModal()" class="text-slate-400 hover:text-slate-600">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <input type="hidden" id="staffModalPostId">
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">対応ステータスを変更</label>
+                <select id="staffStatusSelect" class="w-full text-xs border border-slate-300 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none font-medium">
+                    <option value="受付中">🟡 受付中（確認中）</option>
+                    <option value="対応中">🔵 対応中（検討・手配中）</option>
+                    <option value="入荷決定">🟢 入荷決定 / 改善実施</option>
+                    <option value="完了">✅ 対応完了</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">店舗からの回答メッセージ</label>
+                <textarea id="staffReplyText" rows="4" placeholder="「〇月〇日に入荷を予定しております！」「ご意見ありがとうございます。店舗備品を補修いたしました。」などのメッセージを入力してください。" class="w-full text-xs border border-slate-300 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none resize-none"></textarea>
+            </div>
+
+            <div class="flex items-center justify-between pt-2">
+                <button onclick="deleteCurrentPost()" type="button" class="text-xs text-red-600 hover:text-red-700 font-medium px-2 py-1 transition">
+                    <i class="fa-solid fa-trash-can mr-1"></i> 投稿を削除
+                </button>
+                <div class="flex space-x-2">
+                    <button onclick="closeStaffModal()" type="button" class="text-xs px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl">キャンセル</button>
+                    <button onclick="saveStaffResponse()" type="button" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2 rounded-xl shadow-sm">
+                        更新・返信を保存
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: GitHub Pages Setup Guide -->
+    <div id="helpModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-xl max-w-xl w-full max-h-[85vh] overflow-y-auto custom-scrollbar p-6 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-slate-800 text-base flex items-center space-x-2">
+                    <i class="fa-brands fa-github text-slate-900"></i>
+                    <span>GitHub Pages ＆ Firebase 設置手順</span>
+                </h3>
+                <button onclick="closeHelpModal()" class="text-slate-400 hover:text-slate-600">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3 text-xs text-slate-600 leading-relaxed">
+                <div class="bg-amber-50 border border-amber-200 p-3 rounded-xl text-amber-900">
+                    <strong class="block mb-1 font-bold">⚠️ 重要：Googleログインの承認済みドメイン追加</strong>
+                    GitHub Pagesで公開した後、Googleログインを動かすにはFirebaseコンソールでのドメイン許可が必要です。
+                </div>
+
+                <ol class="list-decimal list-inside space-y-2 font-medium">
+                    <li class="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                        <strong>GitHub Pagesにアップロード:</strong><br>
+                        このファイルを <code>index.html</code> という名前で保存し、GitHubリポジトリのルート（mainブランチ）へプッシュします。
+                    </li>
+                    <li class="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                        <strong>Pagesの設定を有効化:</strong><br>
+                        GitHubリポジトリの Settings &gt; Pages で Deploy from a branch (main / root) を選択して保存します。
+                    </li>
+                    <li class="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                        <strong>Firebaseにドメインを追加:</strong><br>
+                        <a href="https://console.firebase.google.com/" target="_blank" class="text-emerald-600 underline">Firebase Console</a> &gt; Authentication &gt; Settings &gt; 「承認済みドメイン」に、あなたのGitHub Pagesドメイン（例: <code>username.github.io</code>）を追加してください。
+                    </li>
+                </ol>
+            </div>
+
+            <div class="text-right pt-2 border-t border-slate-100">
+                <button onclick="closeHelpModal()" class="bg-slate-800 text-white text-xs px-4 py-2 rounded-xl">閉じる</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-slate-800 text-slate-400 py-6 text-center text-xs mt-auto">
+        <p>© 2026 みどり農産物直売所 コミュニティポータル | Powered by Firebase & GitHub Pages</p>
+    </footer>
+
+    <!-- FIREBASE MODULES & APP LOGIC -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            GoogleAuthProvider, 
+            signInWithPopup, 
+            signOut, 
+            onAuthStateChanged 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            collection, 
+            addDoc, 
+            updateDoc, 
+            deleteDoc, 
+            doc, 
+            onSnapshot, 
+            serverTimestamp,
+            increment
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Provided Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAqqfDf0LE6IdSz_t6YOKCntBffUrMPYL8",
+            authDomain: "task-98e32.firebaseapp.com",
+            projectId: "task-98e32",
+            storageBucket: "task-98e32.firebasestorage.app",
+            messagingSenderId: "437082583332",
+            appId: "1:437082583332:web:bc0235fc529d8085fd43b1",
+            measurementId: "G-108NX870YY"
+        };
+
+        // Global App State Variables
+        let app, db, auth;
+        let currentUser = null;
+        let postsData = [];
+        let activeTab = 'all'; // 'all', 'request', 'feedback', 'tasks'
+        let selectedCategory = 'ALL';
+        let currentRatingVal = 0;
+        let isStaffMode = false;
+
+        // Firestore Collection Path
+        const COLLECTION_NAME = "direct_market_posts";
+
+        // Initialize Firebase safely
+        try {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+            console.log("Firebase initialized successfully");
+        } catch (err) {
+            console.error("Firebase init error:", err);
+            alert("Firebaseの初期化に失敗しました。設定を確認してください。");
+        }
+
+        // --- AUTHENTICATION FUNCTIONS ---
+        window.loginWithGoogle = async function() {
+            try {
+                const provider = new GoogleAuthProvider();
+                await signInWithPopup(auth, provider);
+            } catch (error) {
+                console.error("Login failed:", error);
+                if (error.code === 'auth/unauthorized-domain') {
+                    alert("【エラー】Firebaseの設定で、現在のドメイン（またはGitHub Pagesドメイン）が承認されていません。ヘルプをご確認ください。");
+                    openHelpModal();
+                } else {
+                    alert("ログインに失敗しました: " + error.message);
+                }
+            }
+        };
+
+        window.logout = async function() {
+            try {
+                await signOut(auth);
+            } catch (error) {
+                console.error("Logout failed:", error);
+            }
+        };
+
+        // Listen for Auth State Changes
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            const googleBtn = document.getElementById('googleSignInBtn');
+            const userInfo = document.getElementById('userInfo');
+            const userAvatar = document.getElementById('userAvatar');
+            const userName = document.getElementById('userName');
+
+            if (user) {
+                googleBtn.classList.add('hidden');
+                userInfo.classList.remove('hidden');
+                userAvatar.src = user.photoURL || 'https://placehold.co/100x100/16a34a/ffffff?text=User';
+                userName.textContent = user.displayName || 'ユーザー';
+            } else {
+                googleBtn.classList.remove('hidden');
+                userInfo.classList.add('hidden');
+            }
+            renderPosts();
+        });
+
+        // --- REALTIME FIRESTORE LISTENER ---
+        function subscribeToPosts() {
+            if (!db) return;
+            const colRef = collection(db, COLLECTION_NAME);
+
+            onSnapshot(colRef, (snapshot) => {
+                postsData = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                renderPosts();
+            }, (error) => {
+                console.error("Firestore listener error:", error);
+            });
+        }
+
+        // --- POST CREATION & EDITING ---
+        window.openCreateModal = function() {
+            if (!currentUser) {
+                if (confirm("投稿するにはGoogleログインが必要です。ログインしますか？")) {
+                    loginWithGoogle();
+                }
+                return;
+            }
+            document.getElementById('postForm').reset();
+            setFormRating(0);
+            document.getElementById('createModal').classList.remove('hidden');
+        };
+
+        window.closeCreateModal = function() {
+            document.getElementById('createModal').classList.add('hidden');
+        };
+
+        window.setFormRating = function(rating) {
+            currentRatingVal = rating;
+            const stars = document.querySelectorAll('#starRatingSelector .star-select');
+            const text = document.getElementById('ratingValText');
+
+            stars.forEach((star, index) => {
+                if (index < rating) {
+                    star.classList.remove('text-slate-300');
+                    star.classList.add('text-amber-400');
+                } else {
+                    star.classList.remove('text-amber-400');
+                    star.classList.add('text-slate-300');
+                }
+            });
+
+            text.textContent = rating > 0 ? `★ ${rating}.0` : '未選択';
+        };
+
+        window.submitPost = async function(event) {
+            event.preventDefault();
+            if (!currentUser) return;
+
+            const postType = document.querySelector('input[name="postType"]:checked').value;
+            const category = document.getElementById('postCategory').value;
+            const title = document.getElementById('postTitle').value.trim();
+            const content = document.getElementById('postContent').value.trim();
+            const imageUrl = document.getElementById('postImageUrl').value.trim();
+
+            if (!title || !content) return;
+
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 送信中...`;
+
+            try {
+                const newPost = {
+                    type: postType, // 'request' or 'feedback'
+                    category: category,
+                    title: title,
+                    content: content,
+                    rating: currentRatingVal,
+                    imageUrl: imageUrl || null,
+                    likes: 0,
+                    likedBy: [],
+                    status: '受付中', // '受付中', '対応中', '入荷決定', '完了'
+                    staffReply: null,
+                    replyTimestamp: null,
+                    userId: currentUser.uid,
+                    userName: currentUser.displayName || '匿名お客さま',
+                    userPhoto: currentUser.photoURL || '',
+                    createdAt: serverTimestamp()
+                };
+
+                await addDoc(collection(db, COLLECTION_NAME), newPost);
+                closeCreateModal();
+            } catch (error) {
+                console.error("Error adding post:", error);
+                alert("投稿の保存に失敗しました: " + error.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> <span>投稿する</span>`;
+            }
+        };
+
+        // --- LIKES / AGREE TOGGLE ---
+        window.toggleLike = async function(postId) {
+            if (!currentUser) {
+                if (confirm("「共感・いいね」をするにはログインが必要です。")) {
+                    loginWithGoogle();
+                }
+                return;
+            }
+
+            const post = postsData.find(p => p.id === postId);
+            if (!post) return;
+
+            const likedBy = post.likedBy || [];
+            const hasLiked = likedBy.includes(currentUser.uid);
+
+            const postRef = doc(db, COLLECTION_NAME, postId);
+
+            try {
+                if (hasLiked) {
+                    const newLikedBy = likedBy.filter(uid => uid !== currentUser.uid);
+                    await updateDoc(postRef, {
+                        likes: increment(-1),
+                        likedBy: newLikedBy
+                    });
+                } else {
+                    likedBy.push(currentUser.uid);
+                    await updateDoc(postRef, {
+                        likes: increment(1),
+                        likedBy: likedBy
+                    });
+                }
+            } catch (error) {
+                console.error("Like toggle error:", error);
+            }
+        };
+
+        // --- STAFF MANAGEMENT & RESPONSES ---
+        window.toggleStaffMode = function() {
+            isStaffMode = !isStaffMode;
+            const text = document.getElementById('staffModeText');
+            const btn = document.getElementById('toggleStaffModeBtn');
+
+            if (isStaffMode) {
+                text.textContent = 'スタッフモード: ON';
+                btn.classList.remove('bg-emerald-800');
+                btn.classList.add('bg-amber-600', 'border-amber-400');
+            } else {
+                text.textContent = 'スタッフモード切り替え';
+                btn.classList.remove('bg-amber-600', 'border-amber-400');
+                btn.classList.add('bg-emerald-800');
+            }
+            renderPosts();
+        };
+
+        window.openStaffModal = function(postId) {
+            const post = postsData.find(p => p.id === postId);
+            if (!post) return;
+
+            document.getElementById('staffModalPostId').value = postId;
+            document.getElementById('staffStatusSelect').value = post.status || '受付中';
+            document.getElementById('staffReplyText').value = post.staffReply || '';
+
+            document.getElementById('staffModal').classList.remove('hidden');
+        };
+
+        window.closeStaffModal = function() {
+            document.getElementById('staffModal').classList.add('hidden');
+        };
+
+        window.saveStaffResponse = async function() {
+            const postId = document.getElementById('staffModalPostId').value;
+            const status = document.getElementById('staffStatusSelect').value;
+            const replyText = document.getElementById('staffReplyText').value.trim();
+
+            if (!postId) return;
+
+            const postRef = doc(db, COLLECTION_NAME, postId);
+
+            try {
+                await updateDoc(postRef, {
+                    status: status,
+                    staffReply: replyText || null,
+                    replyTimestamp: serverTimestamp()
+                });
+                closeStaffModal();
+            } catch (error) {
+                console.error("Staff update error:", error);
+                alert("更新に失敗しました: " + error.message);
+            }
+        };
+
+        window.deleteCurrentPost = async function() {
+            const postId = document.getElementById('staffModalPostId').value;
+            if (!postId) return;
+
+            if (confirm("この投稿を削除しますか？取り消しはできません。")) {
+                try {
+                    await deleteDoc(doc(db, COLLECTION_NAME, postId));
+                    closeStaffModal();
+                } catch (error) {
+                    console.error("Delete error:", error);
+                    alert("削除に失敗しました: " + error.message);
+                }
+            }
+        };
+
+        // --- TAB & FILTER CONTROLS ---
+        window.switchTab = function(tabName) {
+            activeTab = tabName;
+
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-emerald-600', 'text-white', 'shadow-sm');
+                btn.classList.add('bg-slate-100', 'text-slate-600');
+            });
+
+            const currentTabBtn = document.getElementById(`tab-${tabName}`);
+            if (currentTabBtn) {
+                currentTabBtn.classList.remove('bg-slate-100', 'text-slate-600');
+                currentTabBtn.classList.add('bg-emerald-600', 'text-white', 'shadow-sm');
+            }
+
+            renderPosts();
+        };
+
+        window.setFilterCategory = function(cat) {
+            selectedCategory = cat;
+
+            document.querySelectorAll('.cat-filter-btn').forEach(btn => {
+                btn.classList.remove('bg-slate-200', 'text-slate-800', 'font-semibold');
+                btn.classList.add('bg-slate-100', 'hover:bg-slate-200');
+            });
+
+            const activeCatBtn = document.getElementById(`filter-cat-${cat}`);
+            if (activeCatBtn) {
+                activeCatBtn.classList.remove('bg-slate-100');
+                activeCatBtn.classList.add('bg-slate-200', 'text-slate-800', 'font-semibold');
+            }
+
+            renderPosts();
+        };
+
+        // --- RENDER POSTS FUNCTION ---
+        function renderPosts() {
+            const grid = document.getElementById('postsGrid');
+            const emptyState = document.getElementById('emptyState');
+            const searchVal = (document.getElementById('searchInput').value || '').toLowerCase();
+            const sortBy = document.getElementById('sortBySelect').value;
+
+            // Filter logic
+            let filtered = postsData.filter(post => {
+                // Tab filter
+                if (activeTab === 'request' && post.type !== 'request') return false;
+                if (activeTab === 'feedback' && post.type !== 'feedback') return false;
+                if (activeTab === 'tasks' && (post.status === '完了' || !post.status)) return false; // Action required tasks
+
+                // Category filter
+                if (selectedCategory !== 'ALL' && post.category !== selectedCategory) return false;
+
+                // Search query filter
+                if (searchVal) {
+                    const titleMatch = post.title && post.title.toLowerCase().includes(searchVal);
+                    const contentMatch = post.content && post.content.toLowerCase().includes(searchVal);
+                    const catMatch = post.category && post.category.toLowerCase().includes(searchVal);
+                    if (!titleMatch && !contentMatch && !catMatch) return false;
+                }
+
+                return true;
+            });
+
+            // Sorting logic
+            filtered.sort((a, b) => {
+                if (sortBy === 'likes') {
+                    return (b.likes || 0) - (a.likes || 0);
+                } else if (sortBy === 'rating') {
+                    return (b.rating || 0) - (a.rating || 0);
+                } else {
+                    // Newest first
+                    const timeA = a.createdAt ? (a.createdAt.seconds || 0) : Date.now();
+                    const timeB = b.createdAt ? (b.createdAt.seconds || 0) : Date.now();
+                    return timeB - timeA;
+                }
+            });
+
+            // Update pending tasks badge count
+            const pendingTasks = postsData.filter(p => p.status === '受付中' || p.status === '対応中').length;
+            const badge = document.getElementById('pendingTaskBadge');
+            if (pendingTasks > 0) {
+                badge.textContent = pendingTasks;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+
+            // Render post counter label
+            document.getElementById('postCountLabel').textContent = `表示: ${filtered.length} 件`;
+
+            if (filtered.length === 0) {
+                grid.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+
+            grid.innerHTML = filtered.map(post => {
+                const isOwner = currentUser && currentUser.uid === post.userId;
+                const hasLiked = currentUser && post.likedBy && post.likedBy.includes(currentUser.uid);
+
+                // Status badge styling
+                let statusBadgeClass = 'bg-amber-100 text-amber-800 border-amber-200';
+                if (post.status === '対応中') statusBadgeClass = 'bg-blue-100 text-blue-800 border-blue-200';
+                if (post.status === '入荷決定') statusBadgeClass = 'bg-emerald-100 text-emerald-800 border-emerald-200';
+                if (post.status === '完了') statusBadgeClass = 'bg-slate-100 text-slate-700 border-slate-200';
+
+                // Type badge
+                const isRequest = post.type === 'request';
+                const typeBadgeHtml = isRequest 
+                    ? `<span class="bg-teal-50 text-teal-700 border border-teal-200 text-[10px] px-2 py-0.5 rounded-md font-bold"><i class="fa-solid fa-basket-shopping mr-1"></i>入荷リクエスト</span>`
+                    : `<span class="bg-rose-50 text-rose-700 border border-rose-200 text-[10px] px-2 py-0.5 rounded-md font-bold"><i class="fa-solid fa-heart mr-1"></i>ご意見・感想</span>`;
+
+                // Star Rating HTML
+                let starsHtml = '';
+                if (post.rating && post.rating > 0) {
+                    starsHtml = `<div class="flex text-amber-400 text-xs">` + 
+                        Array.from({length: 5}, (_, i) => `<i class="fa-${i < post.rating ? 'solid' : 'regular'} fa-star"></i>`).join('') +
+                        `</div>`;
+                }
+
+                // Date formatting
+                let dateStr = 'たった今';
+                if (post.createdAt && post.createdAt.seconds) {
+                    const date = new Date(post.createdAt.seconds * 1000);
+                    dateStr = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+                }
+
+                return `
+                    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between relative group">
+                        
+                        <div>
+                            <!-- Header Info -->
+                            <div class="flex items-center justify-between gap-2 mb-2">
+                                <div class="flex flex-wrap items-center gap-1.5">
+                                    ${typeBadgeHtml}
+                                    <span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-medium">${post.category || 'その他'}</span>
+                                </div>
+                                <span class="text-[10px] border ${statusBadgeClass} px-2 py-0.5 rounded-full font-bold">
+                                    ${post.status || '受付中'}
+                                </span>
+                            </div>
+
+                            <!-- Title -->
+                            <h3 class="font-bold text-slate-800 text-base leading-snug mb-1.5">${escapeHtml(post.title)}</h3>
+
+                            <!-- Rating stars if available -->
+                            ${starsHtml ? `<div class="mb-2">${starsHtml}</div>` : ''}
+
+                            <!-- Content -->
+                            <p class="text-xs text-slate-600 leading-relaxed whitespace-pre-line mb-3">${escapeHtml(post.content)}</p>
+
+                            <!-- Optional Image -->
+                            ${post.imageUrl ? `
+                                <div class="mb-3 rounded-xl overflow-hidden border border-slate-100 max-h-48 bg-slate-50">
+                                    <img src="${escapeHtml(post.imageUrl)}" onerror="this.style.display='none'" alt="添付画像" class="w-full h-full object-cover">
+                                </div>
+                            ` : ''}
+                        </div>
+
+                        <!-- Staff Reply Card (if answered) -->
+                        <div>
+                            ${post.staffReply ? `
+                                <div class="bg-emerald-50/80 border border-emerald-200 rounded-xl p-3 my-3 text-xs">
+                                    <div class="flex items-center space-x-1.5 font-bold text-emerald-800 mb-1">
+                                        <i class="fa-solid fa-[#15803d] fa-store"></i>
+                                        <span>直売所スタッフからの返信</span>
+                                    </div>
+                                    <p class="text-slate-700 leading-relaxed">${escapeHtml(post.staffReply)}</p>
+                                </div>
+                            ` : ''}
+
+                            <!-- Footer Metadata & Action Buttons -->
+                            <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+                                <div class="flex items-center space-x-2">
+                                    <img src="${post.userPhoto || 'https://placehold.co/100x100/16a34a/ffffff?text=U'}" class="w-5 h-5 rounded-full border border-slate-200" alt="">
+                                    <span class="truncate max-w-[90px] text-slate-600 font-medium">${escapeHtml(post.userName || '匿名')}</span>
+                                    <span>•</span>
+                                    <span>${dateStr}</span>
+                                </div>
+
+                                <div class="flex items-center space-x-2">
+                                    <!-- Staff Action Button -->
+                                    ${isStaffMode ? `
+                                        <button onclick="openStaffModal('${post.id}')" class="text-xs bg-amber-100 hover:bg-amber-200 text-amber-800 font-medium px-2.5 py-1 rounded-lg transition flex items-center space-x-1">
+                                            <i class="fa-solid fa-pen"></i>
+                                            <span>対応</span>
+                                        </button>
+                                    ` : ''}
+
+                                    <!-- Like / Agree Button -->
+                                    <button onclick="toggleLike('${post.id}')" class="flex items-center space-x-1 px-2.5 py-1 rounded-lg border transition ${hasLiked ? 'bg-emerald-50 border-emerald-300 text-emerald-600 font-bold' : 'border-slate-200 hover:bg-slate-50 text-slate-500'}">
+                                        <i class="fa-${hasLiked ? 'solid' : 'regular'} fa-thumbs-up"></i>
+                                        <span>${post.likes || 0}</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Helper string sanitization
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Help Modal toggle
+        window.openHelpModal = function() { document.getElementById('helpModal').classList.remove('hidden'); };
+        window.closeHelpModal = function() { document.getElementById('helpModal').classList.add('hidden'); };
+
+        // Initialize Realtime Sync on window load
+        window.onload = function() {
+            subscribeToPosts();
+        };
+    </script>
+</body>
+</html>
